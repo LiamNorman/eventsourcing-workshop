@@ -23,7 +23,6 @@ use Workshop\Domains\Wallet\Infra\WalletRepository;
 
 class WalletServiceProvider extends ServiceProvider
 {
-
     public function register()
     {
         $explicitlyMappedClassNameInflector = new \EventSauce\EventSourcing\ExplicitlyMappedClassNameInflector([
