@@ -4,6 +4,7 @@ namespace Workshop\Domains\Wallet\Tests;
 
 use Workshop\Domains\Wallet\Events\TokensDeposited;
 use Workshop\Domains\Wallet\Events\TokensWithdrawn;
+use Workshop\Domains\Wallet\Events\WithdrawalFailed;
 use Workshop\Domains\Wallet\Exceptions\InsufficientTokensException;
 use Workshop\Domains\Wallet\Wallet;
 
@@ -14,6 +15,7 @@ class WithdrawTokensTest extends WalletTestCase
     {
         $this->given()
             ->when(fn(Wallet $wallet) => $wallet->withdraw(100))
+            ->then(new WithdrawalFailed())
             ->expectToFail(InsufficientTokensException::insufficientTokens(100, 0));
     }
 

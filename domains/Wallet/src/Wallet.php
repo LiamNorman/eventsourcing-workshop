@@ -6,6 +6,7 @@ use EventSauce\EventSourcing\AggregateRoot;
 use EventSauce\EventSourcing\AggregateRootBehaviour;
 use Workshop\Domains\Wallet\Events\TokensDeposited;
 use Workshop\Domains\Wallet\Events\TokensWithdrawn;
+use Workshop\Domains\Wallet\Events\WithdrawalFailed;
 use Workshop\Domains\Wallet\Exceptions\InsufficientTokensException;
 
 class Wallet implements AggregateRoot
@@ -22,6 +23,7 @@ class Wallet implements AggregateRoot
     public function withdraw(int $tokens)
     {
         if ($tokens > $this->availableTokens) {
+            $this->recordThat(new WithdrawalFailed());
             throw InsufficientTokensException::insufficientTokens($tokens, $this->availableTokens);
         }
 
@@ -36,5 +38,10 @@ class Wallet implements AggregateRoot
     private function applyTokensDeposited(TokensDeposited $event): void
     {
         $this->availableTokens += $event->tokens;
+    }
+
+    private function applyWithdrawalFailed(): void
+    {
+        return;
     }
 }
