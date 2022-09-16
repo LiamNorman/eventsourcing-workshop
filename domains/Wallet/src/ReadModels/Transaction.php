@@ -2,6 +2,7 @@
 
 namespace Workshop\Domains\Wallet\ReadModels;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -25,5 +26,15 @@ class Transaction extends Model
             $walletId = $walletId->toString();
         }
         return $query->where('wallet_id', $walletId);
+    }
+
+    public function addTransaction(string $eventId, string $walletId, int $amount, Carbon $transactedAt): void
+    {
+        Transaction::create([
+            'event_id' => $eventId,
+            'wallet_id' => $walletId,
+            'amount' => $amount,
+            'transacted_at' => $transactedAt
+        ]);
     }
 }

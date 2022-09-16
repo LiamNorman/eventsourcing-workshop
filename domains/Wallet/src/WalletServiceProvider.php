@@ -8,18 +8,23 @@ use EventSauce\EventSourcing\MessageDecoratorChain;
 use EventSauce\EventSourcing\MessageDispatcherChain;
 use EventSauce\EventSourcing\Serialization\ConstructingMessageSerializer;
 use EventSauce\EventSourcing\Serialization\ObjectMapperPayloadSerializer;
+use EventSauce\EventSourcing\SynchronousMessageDispatcher;
 use EventSauce\MessageRepository\TableSchema\DefaultTableSchema;
 use EventSauce\UuidEncoding\BinaryUuidEncoder;
 use EventSauce\UuidEncoding\StringUuidEncoder;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\ServiceProvider;
+use Workshop\Domains\Wallet\Decorators\EventIDDecorator;
 use Workshop\Domains\Wallet\Events\TokensDeposited;
 use Workshop\Domains\Wallet\Events\TokensWithdrawn;
 use Workshop\Domains\Wallet\Events\WithdrawalFailed;
 use Workshop\Domains\Wallet\Infra\Decorators\RandomNumberDecorator;
+use Workshop\Domains\Wallet\Infra\EloquentTransactionsReadModelRepository;
+use Workshop\Domains\Wallet\Infra\TransactionsReadModelRepository;
 use Workshop\Domains\Wallet\Infra\WalletMessageRepository;
 use Workshop\Domains\Wallet\Infra\WalletRepository;
+use Workshop\Domains\Wallet\Projectors\TransactionsProjector;
 
 class WalletServiceProvider extends ServiceProvider
 {
@@ -34,6 +39,8 @@ class WalletServiceProvider extends ServiceProvider
             WalletId::class => 'wallet_id',
         ]);
 
+        $this->app->bind(TransactionsReadModelRepository::class, EloquentTransactionsReadModelRepository::class);
+
         $this->app->bind(WalletMessageRepository::class, function (Application $application) use ($explicitlyMappedClassNameInflector) {
             return new WalletMessageRepository(
                 connection: $application->make(DatabaseManager::class)->connection(),
@@ -46,13 +53,18 @@ class WalletServiceProvider extends ServiceProvider
 
         $this->app->bind(WalletRepository::class, function () use ($explicitlyMappedClassNameInflector) {
             return new WalletRepository(
-                $this->app->make(WalletMessageRepository::class),
-                new MessageDispatcherChain(),
-                new MessageDecoratorChain(
+                messageRepository: $this->app->make(WalletMessageRepository::class),
+                dispatcher: new MessageDispatcherChain(
+                    new SynchronousMessageDispatcher(
+                        $this->app->make(TransactionsProjector::class),
+                    )
+                ),
+                decorator: new MessageDecoratorChain(
+                    new EventIDDecorator(),
                     new DefaultHeadersDecorator(inflector: $explicitlyMappedClassNameInflector),
                     new RandomNumberDecorator()
                 ),
-                $explicitlyMappedClassNameInflector,
+                classNameInflector: $explicitlyMappedClassNameInflector,
             );
         });
     }
