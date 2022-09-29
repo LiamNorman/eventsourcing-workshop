@@ -2,6 +2,7 @@
 
 namespace Workshop\Domains\Wallet;
 
+use EventSauce\Clock\SystemClock;
 use EventSauce\EventSourcing\DefaultHeadersDecorator;
 use EventSauce\EventSourcing\DotSeparatedSnakeCaseInflector;
 use EventSauce\EventSourcing\MessageDecoratorChain;
@@ -17,6 +18,10 @@ use EventSauce\UuidEncoding\StringUuidEncoder;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\ServiceProvider;
+use Robertbaelde\PersistingMessageBus\DefaultMessageDecorator;
+use Robertbaelde\PersistingMessageBus\Laravel\IlluminateMessageRepository;
+use Robertbaelde\PersistingMessageBus\MessageBus;
+use Robertbaelde\PersistingMessageBus\MessageDispatcher;
 use Workshop\Domains\Wallet\Decorators\EventIDDecorator;
 use Workshop\Domains\Wallet\Events\TokensDeposited;
 use Workshop\Domains\Wallet\Events\TokensWithdrawn;
@@ -27,6 +32,7 @@ use Workshop\Domains\Wallet\Infra\TransactionsReadModelRepository;
 use Workshop\Domains\Wallet\Infra\WalletMessageRepository;
 use Workshop\Domains\Wallet\Infra\WalletRepository;
 use Workshop\Domains\Wallet\Projectors\TransactionsProjector;
+use Workshop\Domains\Wallet\PublicEvents\Balance\Balance;
 use Workshop\Domains\Wallet\Upcasters\TransactedAtUpcaster;
 
 class WalletServiceProvider extends ServiceProvider
@@ -76,5 +82,28 @@ class WalletServiceProvider extends ServiceProvider
                 classNameInflector: $explicitlyMappedClassNameInflector,
             );
         });
+
+        $this->app->bind('WalletPublicEvents', function (Application $application) {
+            return new IlluminateMessageRepository(
+                connection: $application->make(DatabaseManager::class)->connection(),
+                tableName: 'wallet_public_events',
+                tableSchema: new \Robertbaelde\PersistingMessageBus\DefaultTableSchema()
+            );
+        });
+
+        $this->app->bind(MessageDispatcher::class, function (Application $application) {
+            return new MessageDispatcher(
+                messageBus: new MessageBus(
+                    new Balance(),
+                    new IlluminateMessageRepository(
+                        connection: $application->make(DatabaseManager::class)->connection(),
+                        tableName: 'wallet_public_events',
+                        tableSchema: new \Robertbaelde\PersistingMessageBus\DefaultTableSchema()
+                    )
+                ),
+                messageDecorator: new DefaultMessageDecorator(new SystemClock()),
+            );
+        });
     }
+
 }
