@@ -9,6 +9,8 @@ use EventSauce\EventSourcing\MessageDispatcherChain;
 use EventSauce\EventSourcing\Serialization\ConstructingMessageSerializer;
 use EventSauce\EventSourcing\Serialization\ObjectMapperPayloadSerializer;
 use EventSauce\EventSourcing\SynchronousMessageDispatcher;
+use EventSauce\EventSourcing\Upcasting\UpcasterChain;
+use EventSauce\EventSourcing\Upcasting\UpcastingMessageSerializer;
 use EventSauce\MessageRepository\TableSchema\DefaultTableSchema;
 use EventSauce\UuidEncoding\BinaryUuidEncoder;
 use EventSauce\UuidEncoding\StringUuidEncoder;
@@ -25,6 +27,7 @@ use Workshop\Domains\Wallet\Infra\TransactionsReadModelRepository;
 use Workshop\Domains\Wallet\Infra\WalletMessageRepository;
 use Workshop\Domains\Wallet\Infra\WalletRepository;
 use Workshop\Domains\Wallet\Projectors\TransactionsProjector;
+use Workshop\Domains\Wallet\Upcasters\TransactedAtUpcaster;
 
 class WalletServiceProvider extends ServiceProvider
 {
@@ -45,7 +48,13 @@ class WalletServiceProvider extends ServiceProvider
             return new WalletMessageRepository(
                 connection: $application->make(DatabaseManager::class)->connection(),
                 tableName: 'wallet_messages',
-                serializer: new ConstructingMessageSerializer(classNameInflector: $explicitlyMappedClassNameInflector, payloadSerializer: new ObjectMapperPayloadSerializer(),),
+                serializer: new UpcastingMessageSerializer(
+                    eventSerializer: new ConstructingMessageSerializer(classNameInflector: $explicitlyMappedClassNameInflector, payloadSerializer: new ObjectMapperPayloadSerializer()),
+                    upcaster: new UpcasterChain(
+                        upcasters: new TransactedAtUpcaster()
+                    )
+                ),
+//                serializer: new ConstructingMessageSerializer(classNameInflector: $explicitlyMappedClassNameInflector, payloadSerializer: new ObjectMapperPayloadSerializer(),),
                 tableSchema: new DefaultTableSchema(),
                 uuidEncoder: new StringUuidEncoder(),
             );

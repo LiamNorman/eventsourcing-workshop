@@ -8,7 +8,8 @@ final class TokensWithdrawn implements SerializablePayload
 {
 
     public function __construct(
-        public readonly int $tokens
+        public readonly int $tokens,
+        public readonly string $description = 'Unknown',
     ) {
     }
 
@@ -16,6 +17,7 @@ final class TokensWithdrawn implements SerializablePayload
     {
         return [
             'tokens' => $this->tokens,
+            'description' => $this->description,
         ];
     }
 
