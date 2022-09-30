@@ -2,14 +2,11 @@
 
 namespace Workshop\Domains\Wallet\Reactors;
 
-use Carbon\Carbon;
 use EventSauce\EventSourcing\EventConsumption\EventConsumer;
 use EventSauce\EventSourcing\Message;
 use EventSauce\EventSourcing\MessageDispatcher;
 use Workshop\Domains\Wallet\Events\TokensDeposited;
 use Workshop\Domains\Wallet\Events\TokensWithdrawn;
-use Workshop\Domains\Wallet\Infra\NotificationService;
-use Illuminate\Support\Facades\Cache;
 use Workshop\Domains\Wallet\PublicEvents\Balance\BalanceUpdated;
 
 class BalanceReactor extends EventConsumer
@@ -30,7 +27,6 @@ class BalanceReactor extends EventConsumer
             balance: $balance,
         ));
     }
-
 
     public function handleTokensWithdrawn(TokensWithdrawn $event, Message $message): void
     {
